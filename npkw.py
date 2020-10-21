@@ -394,36 +394,3 @@ class Test:
             print("Stopped with decision for H" + str(H));
 
         return H
-    
-    def simulate_naive(self, p=(None,), verbose=False):
-        z0 = 1.0
-        x = self.N * (0,)
-
-        if verbose:
-            print("\nStarting test:")
-            print("\nsample = " + str(x) + "\n")
-
-        for n in range(self.horizon):
-            q, psi, gamma, d = self._look_ahead(z0, x)
-
-            if verbose:
-                print("q     = " + str(q))
-                print("psi   = " + str(psi))
-                print("gamma = " + str(gamma))
-
-            if any(p):
-                s = np.random.multinomial(1, p)
-            else:
-                s = np.random.multinomial(1, q)
-
-            x = tuple(x + s)
-            idx = np.nonzero(s)[0].item()
-            z0 *= q[idx]
-
-            if verbose:
-                print("\nsample = " + str(x) + "\n")
-
-            if self.g(x) < z0 + self.d(z0, x) or np.sum(x) == self.horizon:
-                break
-
-        return x
