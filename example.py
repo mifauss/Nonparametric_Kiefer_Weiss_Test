@@ -15,7 +15,7 @@ p2 = np.array([0.8, 0.2])
 horizon = 21
 error_cost = 20
 
-# Initialize test, call without the 'verbose=False' to supress output
+# Initialize test, call without the 'verbose' parameter or set 'verbose=False' to supress output
 npkwt = npkw.Test(horizon, p1, p2, error_cost, verbose=True)
 
 # Calculate all required functions
