@@ -1,3 +1,3 @@
-# Nonparametric Kiefer--Weiss Test
+# Nonparametric Kiefer-Weiss Test
 
-Design and simulate (finite horizon) nonparametric Kiefer-Weiss tests for discrete distributions. The main class is defined in 'npkw.py'. See 'example.py' for an example of how to use it.
+Design and simulate nonparametric Kiefer-Weiss tests for discrete distributions and for a shift-in-mean of a standard normal distribution. The main classes are defined in `npkwt.py`. See the notebooks for examples, and to reproduce the figures in the companion paper.
