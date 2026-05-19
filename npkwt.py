@@ -249,9 +249,12 @@ class NPKWTDiscreteLimited:
         """
         Evaluate b_k^*(log_z).
         """
+        if k == 0:
+            return 1
+        
         b_grid = self.c_grid[self.c_ppui :]
         cost_cont = np.array(
-            [self.rho_splines[k][self.c_idx(b) - self.c_ppui](log_z + self.llr) @ self.p0 for b in b_grid]
+            [self.rho_splines[k - 1][self.c_idx(b) - self.c_ppui](log_z + self.llr) @ self.p0 for b in b_grid]
         )
         gain = (g(log_z, self.base) - cost_cont) / b_grid
         return 1 + gain.argmax() / self.c_ppui
@@ -867,4 +870,3 @@ class NPKWTNormal(NPKWTDiscrete):
         """
         outcomes = [self.run(log_z, c, P, out_of_range) for _ in tqdm(range(runs))]
         return np.array(list(zip(*outcomes)))
-
