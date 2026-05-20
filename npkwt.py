@@ -264,8 +264,11 @@ class NPKWTDiscreteLimited:
         Initialize NPKWT with given log_z and c grids. See `setup` method for more information.
         """
         self.log_z_grid = log_z_grid
+        
+        c_max_pos = np.ceil(self.b_star_ub(log_z_grid[-1])).astype(int)
+        c_max_neg = np.ceil(self.b_star_ub(log_z_grid[0])).astype(int)
+        self.c_max = np.maximum(c_max_pos, c_max_neg)
         self.c_ppui = c_ppui
-        self.c_max = np.maximum(self.b_star_ub(self.log_z_grid[0]), self.b_star_ub(self.log_z_grid[-1]))
         self.c_grid = np.arange(0, self.c_max, 1 / self.c_ppui)
         self.b_star_vectors = np.ones((self.k + 1, self.log_z_grid.size))
 
@@ -347,7 +350,7 @@ class NPKWTDiscreteLimited:
         Approximate upper bound on b_k^*(z).
         """
         res = minimize_scalar(lambda b: (self.rho0_approx(log_z, b) - g(log_z, self.base)) / b, bounds=(1, 1e4))
-        return np.ceil(res.x).astype(int)
+        return res.x
 
     def b_star_lb(self, log_z : float) -> int:
         """
@@ -543,7 +546,10 @@ class NPKWTDiscrete:
         Initialize NPKWT with given log_z and c grids. See `setup` method for more information.
         """
         self.log_z_grid = log_z_grid
-        self.n_max = np.maximum(self.m_star_ub(self.log_z_grid[0]), self.m_star_ub(self.log_z_grid[-1]))
+
+        n_max_pos = np.ceil(self.m_star_ub(self.log_z_grid[-1])).astype(int)
+        n_max_neg = np.ceil(self.m_star_ub(self.log_z_grid[0])).astype(int)
+        self.n_max = np.maximum(n_max_pos, n_max_neg)
         self.m_star_vector = np.ones(self.log_z_grid.size)
 
         self.cost_stop = g(self.log_z_grid, self.base)
@@ -625,7 +631,7 @@ class NPKWTDiscrete:
         Approximate upper bound on m^*(z).
         """
         res = minimize_scalar(lambda b: (self.rho0_approx(log_z, b) - g(log_z, self.base)) / b, bounds=(1, 1e4))
-        return np.ceil(res.x).astype(int)
+        return res.x
 
     def m_star_lb(self, log_z : float) -> int:
         """
@@ -776,6 +782,28 @@ class NPKWTNormalLimited(NPKWTDiscreteLimited):
         outcomes = [self.run(log_z, c, P, out_of_range) for _ in tqdm(range(runs))]
         return np.array(list(zip(*outcomes)))
 
+    def initialize(self, log_z_grid: npt.NDArray[np.float64], c_ppui: int) -> None:
+        """
+        Initialize NPKWT with given log_z and c grids. See `setup` method for more information.
+        """
+        self.log_z_grid = log_z_grid
+        self.c_ppui = c_ppui
+        c_max_pos = np.ceil(self.b_star_ub(log_z_grid[-1])).astype(int)
+        c_max_neg = np.ceil(self.b_star_ub(log_z_grid[0])).astype(int)
+        self.c_max = np.maximum(c_max_pos, c_max_neg)
+        self.c_grid = np.arange(0, self.c_max, 1 / self.c_ppui)
+        self.b_star_vectors = np.ones((self.k + 1, self.log_z_grid.size))
+
+        self.cost_stop = g(self.log_z_grid, self.base)
+
+        self.rho_vectors = np.empty((self.k + 1, self.c_grid.size, self.log_z_grid.size))
+        for idx, c in enumerate(self.c_grid):
+            if c < 1:
+                self.rho_vectors[0][idx] = self.cost_stop
+            else:
+                self.rho_vectors[0][idx] = self.rho0_approx(self.log_z_grid, np.floor(c))
+            self.rho_splines[0].append(get_rho_spline(self.log_z_grid, self.rho_vectors[0][idx]))
+
 
 class NPKWTNormal(NPKWTDiscrete):
     """
@@ -870,3 +898,25 @@ class NPKWTNormal(NPKWTDiscrete):
         """
         outcomes = [self.run(log_z, c, P, out_of_range) for _ in tqdm(range(runs))]
         return np.array(list(zip(*outcomes)))
+
+    def initialize(self, log_z_grid: npt.NDArray[np.float64]) -> None:
+        """
+        Initialize NPKWT with given log_z and c grids. See `setup` method for more information.
+        """
+        self.log_z_grid = log_z_grid
+        n_max_pos = np.ceil(self.m_star_ub(log_z_grid[-1])).astype(int)
+        n_max_neg = np.ceil(self.m_star_ub(log_z_grid[0])).astype(int)
+        self.n_max = np.maximum(n_max_pos, n_max_neg)
+        self.m_star_vector = np.ones(self.log_z_grid.size)
+
+        self.cost_stop = g(self.log_z_grid, self.base)
+
+        self.rho_vectors = np.empty((self.n_max + 1, self.log_z_grid.size))
+        for n in range(self.n_max + 1):
+            if n == 0:
+                self.rho_vectors[n] = self.cost_stop
+            else:
+                self.rho_vectors[n] = self.rho0_approx(self.log_z_grid, n)
+            self.rho_splines.append(get_rho_spline(self.log_z_grid, self.rho_vectors[n]))
+        self.m_star_vector = self.get_m_star_vec()
+
